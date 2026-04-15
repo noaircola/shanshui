@@ -10,70 +10,44 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Serif TC', serif; background-color: #efede5; overflow: hidden; }
-        
         .page-container {
             display: grid;
-            grid-template-columns: 1fr 300px;
+            grid-template-columns: 1fr 320px;
             grid-template-rows: auto 1fr auto;
             height: 100vh;
         }
-
         header { grid-column: span 2; }
-
         .canvas-area {
             background-color: #dbd8cb;
             display: flex; justify-content: center; align-items: center;
             padding: 20px; overflow: hidden;
         }
-
         .vertical-canvas {
-            width: 50vw; height: 85vh;
+            width: 45vw; height: 85vh;
             background-color: #fcfcf9;
             background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
             position: relative;
             box-shadow: 0 30px 60px rgba(0,0,0,0.2);
             border: 1px solid #c9c4b4;
         }
-
-        /* 物件樣式：取消藍框 */
         .element-item { 
             touch-action: none; position: absolute; cursor: grab;
+            transition: outline 0.2s;
         }
-        .element-item img { width: 100%; height: auto; }
+        .element-item img { width: 100%; height: auto; pointer-events: none; }
+        
+        /* 選中時只顯示極細的藍色輪廓線 */
+        .is-selected { outline: 1px solid rgba(59, 130, 246, 0.5); }
 
-        /* 側邊縮放拉桿 */
-        .resize-slider-container {
-            position: absolute;
-            right: -30px; top: 0; bottom: 0;
-            width: 20px;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            z-index: 1001;
-        }
-        .is-selected .resize-slider-container { display: flex; }
-
-        .resize-slider {
-            appearance: none;
-            width: 80px; height: 4px;
-            background: #3b82f6;
-            transform: rotate(90deg);
-            transform-origin: center;
-            margin-top: 40px;
-            border-radius: 2px;
-        }
-
-        /* 浮動按鈕：取消背景，簡約化 */
         .floating-controls {
             position: absolute;
-            top: -40px; left: 50%;
+            top: -45px; left: 50%;
             transform: translateX(-50%);
-            display: none; gap: 8px;
+            display: none; gap: 6px;
             z-index: 1001;
         }
         .is-selected .floating-controls { display: flex; }
 
-        /* 右側圖層面板 */
         .layer-panel {
             background: #fdfdfb;
             border-left: 1px solid #d1cfc7;
@@ -81,7 +55,19 @@
             overflow-y: auto;
         }
 
-        /* 底部素材庫 */
+        /* 自定義滑桿樣式 */
+        .layer-slider {
+            width: 100%; height: 4px;
+            background: #e2e2d5;
+            border-radius: 2px;
+            appearance: none;
+            outline: none;
+        }
+        .layer-slider::-webkit-slider-thumb {
+            appearance: none; width: 12px; height: 12px;
+            background: #3b82f6; border-radius: 50%; cursor: pointer;
+        }
+
         footer {
             grid-column: span 2;
             background: #2d2a26;
@@ -90,7 +76,7 @@
     </style>
 </head>
 <body>
-    <div id="app" class="page-container" @click="selectedId = null">
+    <div id="app" class="page-container" @mousedown="selectedId = null">
         <header class="bg-stone-900 text-stone-100 p-5 shadow-xl">
             <h1 class="text-2xl font-bold tracking-[0.5em] text-center">穿越詩意，建構山水</h1>
         </header>
@@ -106,39 +92,45 @@
                     
                     <img :src="el.img" :alt="el.displayName">
                     
-                    <div class="resize-slider-container">
-                        <input type="range" min="50" max="600" v-model="el.w" class="resize-slider" @mousedown.stop>
-                    </div>
-
-                    <div class="floating-controls bg-white/80 backdrop-blur px-2 py-1 rounded-lg shadow-lg border border-stone-200">
-                        <button @click.stop="moveLayer(el.id, 1)" class="p-1 hover:bg-stone-200 rounded">🔼</button>
-                        <button @click.stop="moveLayer(el.id, -1)" class="p-1 hover:bg-stone-200 rounded">🔽</button>
-                        <button @click.stop="deleteElement(el.id)" class="p-1 hover:bg-red-100 text-red-600 rounded">✕</button>
+                    <div class="floating-controls bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-lg border border-stone-200">
+                        <button @click.stop="moveLayer(el.id, 1)" class="w-7 h-7 hover:bg-stone-200 rounded-full text-xs">🔼</button>
+                        <button @click.stop="moveLayer(el.id, -1)" class="w-7 h-7 hover:bg-stone-200 rounded-full text-xs">🔽</button>
+                        <button @click.stop="deleteElement(el.id)" class="w-7 h-7 text-red-600 hover:bg-red-50 rounded-full text-xs">✕</button>
                     </div>
                 </div>
             </div>
         </main>
 
-        <aside class="layer-panel">
-            <h2 class="font-bold text-stone-700 mb-4 border-b pb-2">圖層管理</h2>
-            <div class="space-y-2">
+        <aside class="layer-panel" @mousedown.stop>
+            <h2 class="font-bold text-stone-700 mb-6 border-b pb-2 tracking-widest text-sm">圖層管理與縮放</h2>
+            <div class="space-y-4">
                 <div v-for="el in sortedElements" :key="el.id" 
-                     @click.stop="selectedId = el.id"
-                     :class="['p-2 rounded border cursor-pointer transition text-sm flex justify-between items-center', 
-                              selectedId === el.id ? 'bg-blue-50 border-blue-400 shadow-sm' : 'bg-white border-stone-200 hover:bg-stone-50']">
-                    <span>{{ el.displayName }}</span>
-                    <span class="text-[10px] text-stone-400">階層 {{ el.z }}</span>
+                     @click="selectedId = el.id"
+                     :class="['p-4 rounded-xl border transition-all duration-300', 
+                              selectedId === el.id ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-100' : 'bg-white border-stone-100 hover:border-stone-200']">
+                    
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-sm font-bold text-stone-800">{{ el.displayName }}</span>
+                        <span class="text-[10px] bg-stone-100 px-2 py-1 rounded text-stone-500 uppercase">Z: {{ el.z }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-stone-400">大小</span>
+                        <input type="range" min="40" max="600" v-model="el.w" class="layer-slider">
+                    </div>
                 </div>
-                <div v-if="elements.length === 0" class="text-stone-400 text-xs text-center py-10 italic">尚未新增素材</div>
+                <div v-if="elements.length === 0" class="text-stone-400 text-xs text-center py-20 italic">點擊下方素材開始構圖</div>
             </div>
         </aside>
 
-        <footer class="flex gap-4 justify-center">
+        <footer class="flex gap-4 justify-center overflow-x-auto px-4">
             <button v-for="lib in library" :key="lib.type" 
                     @click="addElement(lib)"
-                    class="bg-stone-800 p-2 rounded border border-stone-600 hover:border-stone-400 transition flex flex-col items-center w-20">
-                <img :src="lib.img" class="h-10 object-contain mb-1">
-                <span class="text-[9px] text-stone-400">{{ lib.name }}</span>
+                    class="bg-stone-800 p-2 rounded border border-stone-700 hover:border-blue-500 transition-all flex flex-col items-center w-20 flex-shrink-0 group">
+                <div class="h-10 w-16 flex items-center justify-center overflow-hidden mb-1">
+                    <img :src="lib.img" class="max-h-full max-w-full object-contain group-hover:scale-110 transition">
+                </div>
+                <span class="text-[9px] text-stone-500 group-hover:text-blue-300">{{ lib.name }}</span>
             </button>
         </footer>
     </div>
@@ -150,7 +142,7 @@
                 return {
                     selectedId: null,
                     nextId: 1,
-                    counts: {}, // 用於自動命名計數
+                    counts: {},
                     library: [
                         { name: '山景', type: '山景', img: 'mountain.png', defaultW: 300 },
                         { name: '遠山', type: '遠山', img: 'mountain2.png', defaultW: 300 },
@@ -170,7 +162,6 @@
             mounted() { this.initInteract(); },
             methods: {
                 addElement(lib) {
-                    // 自動命名邏輯
                     const type = lib.type;
                     this.counts[type] = (this.counts[type] || 0) + 1;
                     const displayName = `${type} ${this.counts[type]}`;
@@ -179,7 +170,8 @@
                         id: this.nextId++,
                         displayName: displayName,
                         img: lib.img,
-                        x: 50, y: 50,
+                        x: 50 + (this.elements.length % 5 * 10),
+                        y: 80 + (this.elements.length % 5 * 10),
                         w: lib.defaultW,
                         z: this.elements.length + 1
                     };
