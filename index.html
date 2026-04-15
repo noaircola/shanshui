@@ -23,6 +23,7 @@
             padding: 20px; overflow: hidden;
             position: relative;
         }
+        /* 增加 cursor: default 確保點擊背景感應清晰 */
         .vertical-canvas {
             width: 50vw; height: 85vh;
             background-color: #fcfcf9;
@@ -30,17 +31,20 @@
             position: relative;
             box-shadow: 0 30px 60px rgba(0,0,0,0.2);
             border: 1px solid #c9c4b4;
+            cursor: default; 
         }
         .element-item { 
             touch-action: none; position: absolute; cursor: grab;
             display: inline-block; line-height: 0;
         }
         .element-item img { width: 100%; height: auto; pointer-events: none; }
+        
+        /* 移除強制 1000 層級，確保層級移動可即時預覽 */
         .is-selected { 
             outline: 2px solid #3b82f6; 
             outline-offset: 1px;
-            z-index: 1000 !important; /* 選中時暫時最高以便觀察，取消選擇後回歸其 z-index */
         }
+        
         .side-panel {
             background: #fdfdfb;
             border-left: 1px solid #d1cfc7;
@@ -76,7 +80,7 @@
         </header>
 
         <main class="canvas-area">
-            <div class="vertical-canvas" id="canvas">
+            <div class="vertical-canvas" id="canvas" @mousedown.self="selectedId = null">
                 <div v-for="el in elements" 
                      :key="el.id" :id="'el-' + el.id"
                      class="element-item"
@@ -100,28 +104,31 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-stone-600 block mb-1">調整層級 (前後)</label>
+                    <label class="text-xs font-bold text-stone-600 block mb-1">調整層級 (當前 Z: {{selectedElement.z}})</label>
                     <div class="flex gap-2">
-                        <button @click="moveLayer(selectedId, 1)" class="flex-1 bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 transition shadow-sm text-sm font-bold">向上移 (最前)</button>
-                        <button @click="moveLayer(selectedId, -1)" class="flex-1 bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 transition shadow-sm text-sm font-bold">向下移 (最後)</button>
+                        <button @click="moveLayer(selectedId, 1)" class="flex-1 bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 transition shadow-sm text-sm font-bold">向上移</button>
+                        <button @click="moveLayer(selectedId, -1)" class="flex-1 bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 transition shadow-sm text-sm font-bold">向下移</button>
                     </div>
                 </div>
 
                 <button @click="deleteElement(selectedId)" class="w-full mt-4 bg-red-50 text-red-600 py-3 rounded-xl hover:bg-red-100 transition text-sm font-bold border border-red-100">✕ 刪除物件</button>
             </div>
 
+            <div v-else class="flex flex-col items-center justify-center py-20 text-stone-400">
+                <p class="text-xs italic">點擊畫布物件進行編輯</p>
+            </div>
+
             <div class="mt-4">
-                <p class="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-2">所有物件 (越下方的 Z 越大)</p>
-                <div class="space-y-2">
-                    <div v-for="el in elements" :key="el.id" 
+                <p class="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-2">圖層清單</p>
+                <div class="space-y-2 overflow-y-auto max-h-[300px] pr-1">
+                    <div v-for="el in sortedLayers" :key="el.id" 
                          @click="selectedId = el.id"
                          :class="['p-3 rounded-xl border cursor-pointer transition-all flex justify-between items-center text-sm', 
                                   selectedId === el.id ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300']">
                         <span>{{ el.displayName }}</span>
-                        <span class="text-[9px] opacity-60 italic">Z-Index: {{ el.z }}</span>
+                        <span class="text-[9px] opacity-60">Z: {{ el.z }}</span>
                     </div>
                 </div>
-                <div v-if="elements.length === 0" class="text-stone-400 text-xs text-center py-20 italic">請點擊下方素材</div>
             </div>
         </aside>
 
@@ -159,7 +166,9 @@
                 }
             },
             computed: {
-                selectedElement() { return this.elements.find(el => el.id === this.selectedId); }
+                selectedElement() { return this.elements.find(el => el.id === this.selectedId); },
+                // 讓清單保持渲染順序（根據 Z-index 從大到小排，方便觀察）
+                sortedLayers() { return [...this.elements].sort((a, b) => b.z - a.z); }
             },
             mounted() { this.initInteract(); },
             methods: {
@@ -167,18 +176,18 @@
                     const type = lib.type;
                     this.counts[type] = (this.counts[type] || 0) + 1;
                     const displayName = `${type} ${this.counts[type]}`;
-
-                    // 計算當前最大 Z-index
+                    
+                    // 新增時自動放在當前最高層
                     const maxZ = this.elements.length > 0 ? Math.max(...this.elements.map(e => e.z)) : 0;
 
                     const newEl = {
                         id: this.nextId++,
                         displayName: displayName,
                         img: lib.img,
-                        x: 100 + (this.elements.length % 5 * 15),
-                        y: 150 + (this.elements.length % 5 * 15),
+                        x: 100,
+                        y: 150,
                         w: lib.defaultW,
-                        z: maxZ + 1 // 預設放在最前面
+                        z: maxZ + 1 
                     };
                     this.elements.push(newEl);
                     this.selectedId = newEl.id;
@@ -190,7 +199,6 @@
                 moveLayer(id, delta) {
                     const el = this.elements.find(e => e.id === id);
                     if (el) {
-                        // 調整層級，但不低於 1
                         el.z = Math.max(1, el.z + delta);
                     }
                 },
