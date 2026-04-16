@@ -19,7 +19,6 @@
         }
         header { grid-column: span 3; }
 
-        /* 左側素材庫：加入分類樣式 */
         .library-panel {
             background: #2d2a26;
             display: flex;
@@ -29,10 +28,11 @@
         }
         .category-tab {
             font-size: 11px;
-            padding: 8px 4px;
+            padding: 10px 4px;
             color: #888;
             border-bottom: 2px solid transparent;
             transition: all 0.3s;
+            cursor: pointer;
         }
         .category-tab.active {
             color: #3b82f6;
@@ -40,11 +40,10 @@
             background: rgba(59, 130, 246, 0.1);
         }
 
-        /* 畫布區：增加間隔與取消選取區域 */
         .canvas-area {
             background-color: #dbd8cb;
             display: flex; justify-content: center; align-items: center;
-            padding: 40px; /* 增加上下距離 */
+            padding: 40px;
             overflow: hidden;
             position: relative;
         }
@@ -61,7 +60,6 @@
             cursor: default;
         }
 
-        /* 構圖線樣式 */
         .guideline {
             position: absolute;
             left: 0; width: 100%;
@@ -75,7 +73,6 @@
         .element-item img { width: 100%; height: auto; pointer-events: none; }
         .is-selected { outline: 2px solid #3b82f6; outline-offset: 2px; }
 
-        /* 右側面板 */
         .side-panel { background: #fdfdfb; border-left: 1px solid #d1cfc7; padding: 20px; overflow-y: auto; }
         
         .custom-range {
@@ -102,7 +99,7 @@
         </header>
 
         <aside class="library-panel">
-            <div class="grid grid-cols-3 gap-0 border-b border-stone-800">
+            <div class="grid grid-cols-5 gap-0 border-b border-stone-800">
                 <button v-for="cat in categories" :key="cat"
                         @click="currentCategory = cat"
                         :class="['category-tab', currentCategory === cat ? 'active' : '']">
@@ -147,7 +144,7 @@
                 
                 <div class="mb-6">
                     <label class="text-[11px] font-bold text-stone-500 block mb-3 uppercase tracking-widest">比例縮放</label>
-                    <input type="range" min="30" max="700" v-model="selectedElement.w" class="custom-range">
+                    <input type="range" min="30" max="750" v-model="selectedElement.w" class="custom-range">
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
@@ -169,7 +166,7 @@
                      :class="['p-3 rounded-xl border cursor-pointer transition-all flex justify-between items-center text-xs', 
                               selectedId === el.id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-stone-100 text-stone-600 shadow-sm']">
                     <span>{{ el.displayName }}</span>
-                    <span class="text-[9px] opacity-50">#{{ el.id }}</span>
+                    <span class="text-[9px] opacity-50">Z:{{ el.z }}</span>
                 </div>
             </div>
         </aside>
@@ -185,17 +182,39 @@
                     nextId: 1,
                     currentCategory: '山',
                     categories: ['山', '石', '樹', '建築', '物件'],
-                    counts: {},
                     library: [
-                        { name: '主峰', type: '山', img: 'mountain.png', defaultW: 350 },
-                        { name: '遠岫', type: '山', img: 'mountain2.png', defaultW: 300 },
-                        { name: '皴石', type: '石', img: 'rock.png', defaultW: 120 },
-                        { name: '溪石', type: '石', img: 'rock.png', defaultW: 80 },
-                        { name: '古松', type: '樹', img: 'tree.png', defaultW: 100 },
-                        { name: '寒林', type: '樹', img: 'tree2.png', defaultW: 120 },
-                        { name: '水榭', type: '建築', img: 'building1.png', defaultW: 150 },
-                        { name: '石橋', type: '建築', img: 'bridge.png', defaultW: 180 },
-                        { name: '孤舟', type: '物件', img: 'boat.png', defaultW: 90 },
+                        // 山 (Mountain 1-7)
+                        { name: '山 1', type: '山', img: 'mountain.png', defaultW: 350 },
+                        { name: '山 2', type: '山', img: 'mountain2.png', defaultW: 300 },
+                        { name: '山 3', type: '山', img: 'mountain3.png', defaultW: 320 },
+                        { name: '山 4', type: '山', img: 'mountain4.png', defaultW: 340 },
+                        { name: '山 5', type: '山', img: 'mountain5.png', defaultW: 310 },
+                        { name: '山 6', type: '山', img: 'mountain6.png', defaultW: 330 },
+                        { name: '山 7', type: '山', img: 'mountain7.png', defaultW: 350 },
+                        // 石 (Rock 1-5)
+                        { name: '石頭 1', type: '石', img: 'rock.png', defaultW: 120 },
+                        { name: '石頭 2', type: '石', img: 'rock2.png', defaultW: 100 },
+                        { name: '石頭 3', type: '石', img: 'rock3.png', defaultW: 110 },
+                        { name: '石頭 4', type: '石', img: 'rock4.png', defaultW: 130 },
+                        { name: '石頭 5', type: '石', img: 'rock5.png', defaultW: 90 },
+                        // 樹 (Tree 1-7)
+                        { name: '樹木 1', type: '樹', img: 'tree.png', defaultW: 100 },
+                        { name: '樹木 2', type: '樹', img: 'tree2.png', defaultW: 120 },
+                        { name: '樹木 3', type: '樹', img: 'tree3.png', defaultW: 110 },
+                        { name: '樹木 4', type: '樹', img: 'tree4.png', defaultW: 130 },
+                        { name: '樹木 5', type: '樹', img: 'tree5.png', defaultW: 115 },
+                        { name: '樹木 6', type: '樹', img: 'tree6.png', defaultW: 125 },
+                        { name: '樹木 7', type: '樹', img: 'tree7.png', defaultW: 140 },
+                        // 建築 (Building 1-4, Bridge 1-2)
+                        { name: '建築 1', type: '建築', img: 'building1.png', defaultW: 150 },
+                        { name: '建築 2', type: '建築', img: 'building2.png', defaultW: 160 },
+                        { name: '建築 3', type: '建築', img: 'building3.png', defaultW: 155 },
+                        { name: '建築 4', type: '建築', img: 'building4.png', defaultW: 170 },
+                        { name: '橋 1', type: '建築', img: 'bridge.png', defaultW: 180 },
+                        { name: '橋 2', type: '建築', img: 'bridge2.png', defaultW: 190 },
+                        // 物件 (Boat 1-2)
+                        { name: '船 1', type: '物件', img: 'boat.png', defaultW: 90 },
+                        { name: '船 2', type: '物件', img: 'boat2.png', defaultW: 100 },
                     ],
                     elements: []
                 }
@@ -210,12 +229,10 @@
             mounted() { this.initInteract(); },
             methods: {
                 addElement(lib) {
-                    const type = lib.name;
-                    this.counts[type] = (this.counts[type] || 0) + 1;
                     const maxZ = this.elements.length > 0 ? Math.max(...this.elements.map(e => e.z)) : 0;
                     const newEl = {
                         id: this.nextId++,
-                        displayName: `${type} ${this.counts[type]}`,
+                        displayName: lib.name, // 直接使用素材定義的名稱
                         img: lib.img,
                         x: 50, y: 150,
                         w: lib.defaultW,
