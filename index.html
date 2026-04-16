@@ -11,191 +11,107 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Serif TC', serif; background-color: #efede5; overflow: hidden; touch-action: none; }
-        
-        .page-container {
-            display: grid;
-            grid-template-columns: 240px 1fr 280px;
-            grid-template-rows: auto 1fr;
-            height: 100vh;
-        }
+        .page-container { display: grid; grid-template-columns: 240px 1fr 280px; grid-template-rows: auto 1fr; height: 100vh; }
         header { grid-column: span 3; }
 
-        /* 左側素材庫 */
-        .library-panel {
-            background: #2d2a26;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #1a1816;
-            overflow: hidden;
-        }
-        .category-tab {
-            font-size: 11px;
-            padding: 10px 4px;
-            color: #888;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            text-align: center;
-        }
-        .category-tab.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-        }
+        /* 分頁切換樣式 */
+        .nav-btn { px-4; py-1.5; border-radius: 8px; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+        .nav-btn.active { background: #f5f5f4; color: #1c1917; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .nav-btn.inactive { color: #a8a29e; }
+
+        /* 素材庫 */
+        .library-panel { background: #2d2a26; display: flex; flex-direction: column; border-right: 1px solid #1a1816; overflow: hidden; }
+        .category-tab { font-size: 11px; padding: 10px 4px; color: #888; border-bottom: 2px solid transparent; cursor: pointer; text-align: center; }
+        .category-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
 
         /* 畫布區 */
-        .canvas-area {
-            background-color: #dbd8cb;
-            display: flex; justify-content: center; align-items: center;
-            padding: 40px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* 1:2 畫布比例 + 邊界裁切 */
-        .vertical-canvas {
-            width: 350px;
-            height: 700px;
-            background-color: #fcfcf9;
-            background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
-            position: relative;
-            box-shadow: 0 40px 80px rgba(0,0,0,0.25);
-            border: 1px solid #c9c4b4;
-            cursor: default;
-            overflow: hidden; /* 關鍵：裁切超出畫布的物件 */
-        }
-
-        .guideline {
-            position: absolute;
-            left: 0; width: 100%;
-            height: 0;
-            border-top: 2px dashed rgba(220, 38, 38, 0.8);
-            z-index: 9999;
-            pointer-events: none;
-        }
-
-        .element-item { 
-            touch-action: none; 
-            position: absolute; 
-            cursor: grab; 
-            line-height: 0;
-            transform-origin: center center;
-        }
+        .canvas-area { background-color: #dbd8cb; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: hidden; position: relative; }
+        .vertical-canvas { width: 350px; height: 700px; background-color: #fcfcf9; background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png'); position: relative; box-shadow: 0 40px 80px rgba(0,0,0,0.25); border: 1px solid #c9c4b4; overflow: hidden; }
+        
+        .guideline { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed rgba(220, 38, 38, 0.8); z-index: 9999; pointer-events: none; }
+        .element-item { touch-action: none; position: absolute; cursor: grab; line-height: 0; transform-origin: center center; }
         .element-item img { width: 100%; height: auto; pointer-events: none; }
         .is-selected { outline: 2px solid #3b82f6; outline-offset: 2px; }
 
-        /* 右側面板 */
         .side-panel { background: #fdfdfb; border-left: 1px solid #d1cfc7; padding: 20px; overflow-y: auto; }
-        
-        .custom-range {
-            width: 100%; height: 6px; background: #e2e2d5;
-            border-radius: 3px; appearance: none; outline: none;
-        }
-        .custom-range::-webkit-slider-thumb {
-            appearance: none; width: 20px; height: 20px;
-            background: #3b82f6; border-radius: 50%; border: 3px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
+        .custom-range { width: 100%; height: 6px; background: #e2e2d5; border-radius: 3px; appearance: none; outline: none; }
+        .custom-range::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
     <div id="app" class="page-container">
-        <header class="bg-stone-900 text-stone-100 p-5 shadow-xl flex justify-between items-center z-50">
-            <h1 class="text-xl font-bold tracking-[0.4em] ml-4">穿越詩意，建構山水</h1>
+        <header class="bg-stone-900 text-stone-100 p-4 shadow-xl flex justify-between items-center z-50">
+            <div class="flex items-center gap-8">
+                <h1 class="text-xl font-bold tracking-[0.4em] ml-4">穿越詩意，建構山水</h1>
+                <nav class="flex gap-2 bg-stone-800 p-1 rounded-xl">
+                    <button @click="activeTab = 'create'" :class="['nav-btn px-4 py-1.5 rounded-lg font-bold', activeTab === 'create' ? 'active bg-stone-100 text-stone-900' : 'text-stone-400 hover:text-stone-200']">意境創作</button>
+                    <button @click="activeTab = 'gallery'" :class="['nav-btn px-4 py-1.5 rounded-lg font-bold', activeTab === 'gallery' ? 'active bg-stone-100 text-stone-900' : 'text-stone-400 hover:text-stone-200']">作品藝廊</button>
+                </nav>
+            </div>
             
-            <div class="flex gap-4">
-                <button @click="downloadArt" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg flex items-center gap-2">
-                    💾 下載作品
-                </button>
-                <button @click.stop="showGuides = !showGuides" 
-                        :class="['px-6 py-2 rounded-full text-xs transition-all duration-300 border-2 flex items-center gap-2 font-bold', 
-                                 showGuides ? 'bg-red-600 border-red-400 text-white shadow-lg' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400']">
+            <div v-if="activeTab === 'create'" class="flex gap-4">
+                <button @click="downloadArt" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg">💾 下載作品</button>
+                <button @click.stop="showGuides = !showGuides" :class="['px-6 py-2 rounded-full text-xs transition-all border-2 font-bold', showGuides ? 'bg-red-600 border-red-400 text-white shadow-lg' : 'bg-stone-800 border-stone-600 text-stone-400']">
                     {{ showGuides ? '隱藏構圖線' : '顯示構圖線' }}
                 </button>
             </div>
         </header>
 
-        <aside class="library-panel">
-            <div class="grid grid-cols-5 border-b border-stone-800">
-                <button v-for="cat in categories" :key="cat"
-                        @click="currentCategory = cat"
-                        :class="['category-tab', currentCategory === cat ? 'active' : '']">
-                    {{ cat }}
-                </button>
-            </div>
-            
-            <div class="p-4 flex flex-col gap-4 overflow-y-auto">
-                <button v-for="lib in filteredLibrary" :key="lib.name" 
-                        @click.stop="addElement(lib)"
-                        class="bg-stone-800 p-3 rounded-xl border border-stone-700 hover:border-blue-500 transition-all flex flex-col items-center group">
-                    <div class="h-14 w-full flex items-center justify-center mb-2">
-                        <img :src="lib.img" class="max-h-full max-w-full object-contain group-hover:scale-110 transition">
+        <template v-if="activeTab === 'create'">
+            <aside class="library-panel">
+                <div class="grid grid-cols-5 border-b border-stone-800">
+                    <button v-for="cat in categories" @click="currentCategory = cat" :class="['category-tab', currentCategory === cat ? 'active' : '']">{{ cat }}</button>
+                </div>
+                <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+                    <button v-for="lib in filteredLibrary" @click.stop="addElement(lib)" class="bg-stone-800 p-3 rounded-xl border border-stone-700 hover:border-blue-500 transition flex flex-col items-center">
+                        <div class="h-12 flex items-center mb-2"><img :src="lib.img" class="max-h-full"></div>
+                        <span class="text-[10px] text-stone-400">{{ lib.name }}</span>
+                    </button>
+                </div>
+            </aside>
+
+            <main class="canvas-area" @mousedown="selectedId = null">
+                <div class="vertical-canvas" id="canvas" @mousedown.stop="selectedId = null">
+                    <div v-if="showGuides" class="guideline" style="top: 33.33%;"></div>
+                    <div v-if="showGuides" class="guideline" style="top: 66.66%;"></div>
+                    <div v-for="el in elements" :key="el.id" :id="'el-' + el.id" class="element-item" :class="{ 'is-selected': selectedId === el.id }" @mousedown.stop="selectedId = el.id" :style="{ width: el.w + 'px', left: el.x + 'px', top: el.y + 'px', zIndex: el.z, transform: `rotate(${el.rotation}deg)` }">
+                        <img :src="el.img">
                     </div>
-                    <span class="text-[10px] text-stone-400 font-medium">{{ lib.name }}</span>
-                </button>
-            </div>
-        </aside>
-
-        <main class="canvas-area" @mousedown="selectedId = null">
-            <div class="vertical-canvas" id="canvas" @mousedown.stop="selectedId = null">
-                <div v-if="showGuides" class="guideline" style="top: 33.33%;"></div>
-                <div v-if="showGuides" class="guideline" style="top: 66.66%;"></div>
-
-                <div v-for="el in elements" 
-                     :key="el.id" :id="'el-' + el.id"
-                     class="element-item"
-                     :class="{ 'is-selected': selectedId === el.id }"
-                     @mousedown.stop="selectedId = el.id"
-                     :style="{ 
-                        width: el.w + 'px', 
-                        left: el.x + 'px', 
-                        top: el.y + 'px', 
-                        zIndex: el.z,
-                        transform: `rotate(${el.rotation}deg)` 
-                     }">
-                    <img :src="el.img" :alt="el.displayName">
                 </div>
-            </div>
-        </main>
+            </main>
 
-        <aside class="side-panel" @mousedown.stop>
-            <div v-if="selectedId" class="bg-blue-50 p-5 rounded-3xl border border-blue-200 shadow-sm mb-6">
-                <h3 class="font-bold text-stone-800 mb-4 flex justify-between">
-                    {{ selectedElement.displayName }}
-                </h3>
-                
-                <div class="mb-6">
-                    <label class="text-[11px] font-bold text-stone-500 block mb-3 uppercase tracking-widest">比例縮放</label>
-                    <input type="range" min="30" max="750" v-model="selectedElement.w" class="custom-range">
+            <aside class="side-panel" @mousedown.stop>
+                <div v-if="selectedId" class="bg-blue-50 p-5 rounded-3xl border border-blue-200 mb-6">
+                    <h3 class="font-bold text-stone-800 mb-4">{{ selectedElement.displayName }}</h3>
+                    <div class="mb-4">
+                        <label class="text-[11px] font-bold text-stone-500 block mb-2 uppercase">比例縮放</label>
+                        <input type="range" min="30" max="750" v-model="selectedElement.w" class="custom-range">
+                    </div>
+                    <div class="mb-6">
+                        <label class="text-[11px] font-bold text-stone-500 block mb-2 uppercase">旋轉角度 ({{selectedElement.rotation}}°)</label>
+                        <input type="range" min="-180" max="180" v-model="selectedElement.rotation" class="custom-range">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="moveLayer(selectedId, 1)" class="bg-white border py-2 rounded-xl text-xs font-bold shadow-sm">向上移</button>
+                        <button @click="moveLayer(selectedId, -1)" class="bg-white border py-2 rounded-xl text-xs font-bold shadow-sm">向下移</button>
+                    </div>
+                    <button @click="deleteElement(selectedId)" class="w-full mt-4 text-red-500 text-[11px] font-bold py-2">✕ 移除此物件</button>
                 </div>
-
-                <div class="mb-6">
-                    <label class="text-[11px] font-bold text-stone-500 block mb-3 uppercase tracking-widest">旋轉角度 ({{selectedElement.rotation}}°)</label>
-                    <input type="range" min="-180" max="180" v-model="selectedElement.rotation" class="custom-range">
+                <div v-else class="py-10 text-center text-stone-300 text-xs italic border-2 border-dashed rounded-3xl mb-6">請在畫布上選取景物</div>
+                <p class="text-[10px] text-stone-400 font-bold uppercase mb-4 tracking-widest">圖層管理</p>
+                <div class="space-y-2">
+                    <div v-for="el in sortedLayers" @click="selectedId = el.id" :class="['p-3 rounded-xl border cursor-pointer text-xs transition', selectedId === el.id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-stone-600']">
+                        {{ el.displayName }}
+                    </div>
                 </div>
+            </aside>
+        </template>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <button @click="moveLayer(selectedId, 1)" class="bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 text-xs font-bold shadow-sm">向上移</button>
-                    <button @click="moveLayer(selectedId, -1)" class="bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 text-xs font-bold shadow-sm">向下移</button>
-                </div>
-                
-                <button @click="deleteElement(selectedId)" class="w-full mt-4 text-red-500 text-[11px] font-bold py-3 hover:bg-red-50 rounded-xl transition">✕ 移除此物件</button>
-            </div>
-
-            <div v-else class="py-16 text-center text-stone-300 text-xs italic border-2 border-dashed border-stone-100 rounded-3xl mb-6">
-                請在畫布上選取景物
-            </div>
-
-            <p class="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-4">圖層順序 (前 → 後)</p>
-            <div class="space-y-2">
-                <div v-for="el in sortedLayers" :key="el.id" 
-                     @click="selectedId = el.id"
-                     :class="['p-3 rounded-xl border cursor-pointer transition-all flex justify-between items-center text-xs', 
-                              selectedId === el.id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-stone-100 text-stone-600 shadow-sm']">
-                    <span>{{ el.displayName }}</span>
-                    <span class="text-[9px] opacity-50">Z:{{ el.z }}</span>
-                </div>
-            </div>
-        </aside>
+        <template v-else>
+            <main class="col-span-3 bg-white h-full w-full">
+                <iframe src="https://padlet.com/embed/214cxi4v4ja5bqla" width="100%" height="100%" frameborder="0" allow="camera;microphone;geolocation" style="width: 100%; height: 100%;"></iframe>
+            </main>
+        </template>
     </div>
 
     <script>
@@ -203,6 +119,7 @@
         createApp({
             data() {
                 return {
+                    activeTab: 'create',
                     selectedId: null,
                     showGuides: false,
                     nextId: 1,
@@ -241,9 +158,7 @@
                 }
             },
             computed: {
-                filteredLibrary() {
-                    return this.library.filter(item => item.type === this.currentCategory);
-                },
+                filteredLibrary() { return this.library.filter(item => item.type === this.currentCategory); },
                 selectedElement() { return this.elements.find(el => el.id === this.selectedId); },
                 sortedLayers() { return [...this.elements].sort((a, b) => b.z - a.z); }
             },
@@ -251,51 +166,29 @@
             methods: {
                 addElement(lib) {
                     const maxZ = this.elements.length > 0 ? Math.max(...this.elements.map(e => e.z)) : 0;
-                    const newEl = {
-                        id: this.nextId++,
-                        displayName: lib.name,
-                        img: lib.img,
-                        x: 50, y: 150,
-                        w: lib.defaultW,
-                        z: maxZ + 1,
-                        rotation: 0 // 初始化旋轉角度
-                    };
-                    this.elements.push(newEl);
-                    this.selectedId = newEl.id;
+                    this.elements.push({ id: this.nextId++, displayName: lib.name, img: lib.img, x: 20, y: 150, w: lib.defaultW, z: maxZ + 1, rotation: 0 });
+                    this.selectedId = this.nextId - 1;
                 },
-                deleteElement(id) {
-                    this.elements = this.elements.filter(el => el.id !== id);
-                    this.selectedId = null;
-                },
-                moveLayer(id, delta) {
-                    const el = this.elements.find(e => e.id === id);
-                    if (el) el.z = Math.max(1, el.z + delta);
-                },
+                deleteElement(id) { this.elements = this.elements.filter(el => el.id !== id); this.selectedId = null; },
+                moveLayer(id, delta) { const el = this.elements.find(e => e.id === id); if (el) el.z = Math.max(1, el.z + delta); },
                 downloadArt() {
-                    this.selectedId = null; // 截圖前取消選取
-                    this.showGuides = false; // 隱藏構圖線
-                    
+                    this.selectedId = null;
+                    this.showGuides = false;
                     setTimeout(() => {
-                        const canvas = document.getElementById('canvas');
-                        html2canvas(canvas, {
-                            backgroundColor: '#fcfcf9',
-                            scale: 2 // 提升下載圖片清晰度
-                        }).then(imgCanvas => {
+                        html2canvas(document.getElementById('canvas'), { backgroundColor: '#fcfcf9', scale: 2 }).then(canvas => {
                             const link = document.createElement('a');
-                            link.download = `山水意境-${new Date().getTime()}.png`;
-                            link.href = imgCanvas.toDataURL();
+                            link.download = `山水意境-${Date.now()}.png`;
+                            link.href = canvas.toDataURL();
                             link.click();
                         });
                     }, 100);
                 },
                 initInteract() {
-                    interact('.element-item').draggable({
-                        listeners: { move: (event) => {
-                            const id = parseInt(event.target.id.replace('el-', ''));
-                            const el = this.elements.find(e => e.id === id);
-                            if (el) { el.x += event.dx; el.y += event.dy; }
-                        }}
-                    });
+                    interact('.element-item').draggable({ listeners: { move: (event) => {
+                        const id = parseInt(event.target.id.replace('el-', ''));
+                        const el = this.elements.find(e => e.id === id);
+                        if (el) { el.x += event.dx; el.y += event.dy; }
+                    }}});
                 }
             }
         }).mount('#app');
