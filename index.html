@@ -2,85 +2,110 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>穿越詩意，建構山水</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Serif TC', serif; background-color: #efede5; overflow: hidden; }
+        body { font-family: 'Noto Serif TC', serif; background-color: #efede5; overflow: hidden; touch-action: none; }
+        
+        /* 三欄佈局：左素材庫 | 中畫布 | 右編輯 */
         .page-container {
             display: grid;
-            grid-template-columns: 1fr 320px;
-            grid-template-rows: auto 1fr auto;
+            grid-template-columns: 200px 1fr 280px;
+            grid-template-rows: auto 1fr;
             height: 100vh;
         }
-        header { grid-column: span 2; }
+        header { grid-column: span 3; }
+
+        /* 左側素材庫 */
+        .library-panel {
+            background: #2d2a26;
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+            border-right: 1px solid #1a1816;
+        }
+
+        /* 畫布區 */
         .canvas-area {
             background-color: #dbd8cb;
             display: flex; justify-content: center; align-items: center;
-            padding: 20px; overflow: hidden;
-            position: relative;
+            padding: 20px; overflow: hidden; position: relative;
         }
-        /* 增加 cursor: default 確保點擊背景感應清晰 */
+
+        /* 1:2.5 畫布比例 */
         .vertical-canvas {
-            width: 50vw; height: 85vh;
+            width: 300px; /* 固定寬度，比例由高度決定 */
+            height: 750px; /* 300 * 2.5 */
             background-color: #fcfcf9;
             background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
             position: relative;
             box-shadow: 0 30px 60px rgba(0,0,0,0.2);
             border: 1px solid #c9c4b4;
-            cursor: default; 
+            cursor: default;
         }
-        .element-item { 
-            touch-action: none; position: absolute; cursor: grab;
-            display: inline-block; line-height: 0;
+        /* iPad 適應性縮放 (如果螢幕太小就縮小畫布顯示) */
+        @media (max-height: 800px) {
+            .vertical-canvas { transform: scale(0.85); }
         }
+
+        /* 三段式構圖線 */
+        .guideline {
+            position: absolute;
+            left: 0; width: 100%;
+            height: 1px;
+            border-top: 1.5px dashed rgba(255, 0, 0, 0.6);
+            z-index: 9999; /* 永遠最上層 */
+            pointer-events: none; /* 不影響點擊 */
+        }
+
+        .element-item { touch-action: none; position: absolute; cursor: grab; line-height: 0; }
         .element-item img { width: 100%; height: auto; pointer-events: none; }
+        .is-selected { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+        /* 右側面板 */
+        .side-panel { background: #fdfdfb; border-left: 1px solid #d1cfc7; padding: 20px; overflow-y: auto; }
         
-        /* 移除強制 1000 層級，確保層級移動可即時預覽 */
-        .is-selected { 
-            outline: 2px solid #3b82f6; 
-            outline-offset: 1px;
-        }
-        
-        .side-panel {
-            background: #fdfdfb;
-            border-left: 1px solid #d1cfc7;
-            padding: 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        footer {
-            grid-column: span 2;
-            background: #2d2a26;
-            padding: 1rem;
-        }
         .custom-range {
-            width: 100%; height: 6px;
-            background: #e2e2d5;
-            border-radius: 3px;
-            appearance: none;
-            outline: none;
+            width: 100%; height: 6px; background: #e2e2d5;
+            border-radius: 3px; appearance: none; outline: none;
         }
         .custom-range::-webkit-slider-thumb {
-            appearance: none; width: 16px; height: 16px;
-            background: #3b82f6; border-radius: 50%; cursor: pointer;
-            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            appearance: none; width: 18px; height: 18px;
+            background: #3b82f6; border-radius: 50%; border: 2px solid white;
         }
     </style>
 </head>
 <body>
     <div id="app" class="page-container" @mousedown="selectedId = null">
-        <header class="bg-stone-900 text-stone-100 p-5 shadow-xl">
-            <h1 class="text-2xl font-bold tracking-[0.5em] text-center">穿越詩意，建構山水</h1>
+        <header class="bg-stone-900 text-stone-100 p-4 shadow-xl flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-[0.4em] ml-4">穿越詩意，建構山水</h1>
+            <button @click.stop="showGuides = !showGuides" 
+                    :class="['px-4 py-2 rounded-full text-xs transition-all border font-bold', 
+                             showGuides ? 'bg-red-600 border-red-600 text-white' : 'bg-stone-800 border-stone-600 text-stone-400']">
+                {{ showGuides ? '隱藏構圖線' : '顯示三段式構圖線' }}
+            </button>
         </header>
+
+        <aside class="library-panel flex flex-col gap-4">
+            <p class="text-[10px] text-stone-500 font-bold tracking-widest text-center uppercase">素材庫</p>
+            <button v-for="lib in library" :key="lib.type" 
+                    @click.stop="addElement(lib)"
+                    class="bg-stone-800 p-3 rounded-xl border border-stone-700 hover:border-blue-500 transition-all flex flex-col items-center group">
+                <div class="h-12 w-full flex items-center justify-center mb-2">
+                    <img :src="lib.img" class="max-h-full max-w-full object-contain group-hover:scale-110 transition">
+                </div>
+                <span class="text-[10px] text-stone-400 font-medium">{{ lib.name }}</span>
+            </button>
+        </aside>
 
         <main class="canvas-area">
             <div class="vertical-canvas" id="canvas" @mousedown.self="selectedId = null">
+                <div v-if="showGuides" class="guideline" style="top: 33.33%;"></div>
+                <div v-if="showGuides" class="guideline" style="top: 66.66%;"></div>
+
                 <div v-for="el in elements" 
                      :key="el.id" :id="'el-' + el.id"
                      class="element-item"
@@ -93,55 +118,34 @@
         </main>
 
         <aside class="side-panel" @mousedown.stop>
-            <h2 class="font-bold text-stone-700 border-b pb-2 tracking-widest text-sm mb-2">編輯面板</h2>
-            
-            <div v-if="selectedId" class="bg-blue-50 p-5 rounded-2xl border border-blue-200 shadow-sm transition-all">
-                <h3 class="text-lg font-bold text-stone-800 mb-4">{{ selectedElement.displayName }}</h3>
-                
+            <div v-if="selectedId" class="bg-blue-50 p-4 rounded-2xl border border-blue-200 shadow-sm mb-6">
+                <h3 class="font-bold text-stone-800 mb-4">{{ selectedElement.displayName }}</h3>
                 <div class="mb-6">
-                    <label class="text-xs font-bold text-stone-600 block mb-2">調整大小</label>
-                    <input type="range" min="40" max="800" v-model="selectedElement.w" class="custom-range">
+                    <label class="text-[10px] font-bold text-stone-500 block mb-2 uppercase">大小控制</label>
+                    <input type="range" min="30" max="600" v-model="selectedElement.w" class="custom-range">
                 </div>
-
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-stone-600 block mb-1">調整層級 (當前 Z: {{selectedElement.z}})</label>
-                    <div class="flex gap-2">
-                        <button @click="moveLayer(selectedId, 1)" class="flex-1 bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 transition shadow-sm text-sm font-bold">向上移</button>
-                        <button @click="moveLayer(selectedId, -1)" class="flex-1 bg-white border border-stone-200 py-3 rounded-xl hover:bg-stone-50 transition shadow-sm text-sm font-bold">向下移</button>
-                    </div>
+                    <button @click="moveLayer(selectedId, 1)" class="w-full bg-white border border-stone-200 py-2 rounded-lg hover:bg-stone-50 text-sm font-bold">向上移 (最前)</button>
+                    <button @click="moveLayer(selectedId, -1)" class="w-full bg-white border border-stone-200 py-2 rounded-lg hover:bg-stone-50 text-sm font-bold">向下移 (最後)</button>
                 </div>
-
-                <button @click="deleteElement(selectedId)" class="w-full mt-4 bg-red-50 text-red-600 py-3 rounded-xl hover:bg-red-100 transition text-sm font-bold border border-red-100">✕ 刪除物件</button>
+                <button @click="deleteElement(selectedId)" class="w-full mt-4 text-red-600 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition">✕ 刪除物件</button>
             </div>
 
-            <div v-else class="flex flex-col items-center justify-center py-20 text-stone-400">
-                <p class="text-xs italic">點擊畫布物件進行編輯</p>
+            <div v-else class="py-10 text-center text-stone-300 text-xs italic border-2 border-dashed border-stone-100 rounded-2xl mb-6">
+                點擊畫布物件進行編輯
             </div>
 
-            <div class="mt-4">
-                <p class="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-2">圖層清單</p>
-                <div class="space-y-2 overflow-y-auto max-h-[300px] pr-1">
-                    <div v-for="el in sortedLayers" :key="el.id" 
-                         @click="selectedId = el.id"
-                         :class="['p-3 rounded-xl border cursor-pointer transition-all flex justify-between items-center text-sm', 
-                                  selectedId === el.id ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300']">
-                        <span>{{ el.displayName }}</span>
-                        <span class="text-[9px] opacity-60">Z: {{ el.z }}</span>
-                    </div>
+            <p class="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-3">圖層管理</p>
+            <div class="space-y-2">
+                <div v-for="el in sortedLayers" :key="el.id" 
+                     @click="selectedId = el.id"
+                     :class="['p-3 rounded-xl border cursor-pointer transition-all flex justify-between items-center text-xs', 
+                              selectedId === el.id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-stone-100 text-stone-600']">
+                    <span>{{ el.displayName }}</span>
+                    <span class="text-[9px] opacity-50">Z:{{ el.z }}</span>
                 </div>
             </div>
         </aside>
-
-        <footer class="flex gap-4 justify-center overflow-x-auto px-4">
-            <button v-for="lib in library" :key="lib.type" 
-                    @click="addElement(lib)"
-                    class="bg-stone-800 p-2 rounded-xl border border-stone-700 hover:border-blue-500 transition-all flex flex-col items-center w-20 flex-shrink-0 group">
-                <div class="h-10 w-16 flex items-center justify-center overflow-hidden mb-1">
-                    <img :src="lib.img" class="max-h-full max-w-full object-contain group-hover:scale-110 transition">
-                </div>
-                <span class="text-[9px] text-stone-500 group-hover:text-blue-300 font-medium">{{ lib.name }}</span>
-            </button>
-        </footer>
     </div>
 
     <script>
@@ -150,24 +154,24 @@
             data() {
                 return {
                     selectedId: null,
+                    showGuides: false,
                     nextId: 1,
                     counts: {},
                     library: [
-                        { name: '山景', type: '山景', img: 'mountain.png', defaultW: 350 },
-                        { name: '遠山', type: '遠山', img: 'mountain2.png', defaultW: 350 },
-                        { name: '古樹', type: '古樹', img: 'tree.png', defaultW: 100 },
-                        { name: '松樹', type: '松樹', img: 'tree2.png', defaultW: 120 },
-                        { name: '樓閣', type: '樓閣', img: 'building1.png', defaultW: 150 },
-                        { name: '小橋', type: '小橋', img: 'bridge.png', defaultW: 180 },
-                        { name: '小船', type: '小船', img: 'boat.png', defaultW: 100 },
-                        { name: '石頭', type: '石頭', img: 'rock.png', defaultW: 120 },
+                        { name: '山景', type: '山景', img: 'mountain.png', defaultW: 280 },
+                        { name: '遠山', type: '遠山', img: 'mountain2.png', defaultW: 250 },
+                        { name: '古樹', type: '古樹', img: 'tree.png', defaultW: 80 },
+                        { name: '松樹', type: '松樹', img: 'tree2.png', defaultW: 100 },
+                        { name: '樓閣', type: '樓閣', img: 'building1.png', defaultW: 120 },
+                        { name: '小橋', type: '小橋', img: 'bridge.png', defaultW: 140 },
+                        { name: '小船', type: '小船', img: 'boat.png', defaultW: 80 },
+                        { name: '石頭', type: '石頭', img: 'rock.png', defaultW: 100 },
                     ],
                     elements: []
                 }
             },
             computed: {
                 selectedElement() { return this.elements.find(el => el.id === this.selectedId); },
-                // 讓清單保持渲染順序（根據 Z-index 從大到小排，方便觀察）
                 sortedLayers() { return [...this.elements].sort((a, b) => b.z - a.z); }
             },
             mounted() { this.initInteract(); },
@@ -175,17 +179,12 @@
                 addElement(lib) {
                     const type = lib.type;
                     this.counts[type] = (this.counts[type] || 0) + 1;
-                    const displayName = `${type} ${this.counts[type]}`;
-                    
-                    // 新增時自動放在當前最高層
                     const maxZ = this.elements.length > 0 ? Math.max(...this.elements.map(e => e.z)) : 0;
-
                     const newEl = {
                         id: this.nextId++,
-                        displayName: displayName,
+                        displayName: `${type} ${this.counts[type]}`,
                         img: lib.img,
-                        x: 100,
-                        y: 150,
+                        x: 20, y: 100,
                         w: lib.defaultW,
                         z: maxZ + 1 
                     };
@@ -194,13 +193,11 @@
                 },
                 deleteElement(id) {
                     this.elements = this.elements.filter(el => el.id !== id);
-                    if (this.selectedId === id) this.selectedId = null;
+                    this.selectedId = null;
                 },
                 moveLayer(id, delta) {
                     const el = this.elements.find(e => e.id === id);
-                    if (el) {
-                        el.z = Math.max(1, el.z + delta);
-                    }
+                    if (el) el.z = Math.max(1, el.z + delta);
                 },
                 initInteract() {
                     interact('.element-item').draggable({
