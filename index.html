@@ -32,7 +32,7 @@
             position: relative; 
             box-shadow: 0 40px 80px rgba(0,0,0,0.25); 
             border: 1px solid #c9c4b4; 
-            overflow: hidden; /* 超出畫布不顯示 */
+            overflow: hidden; 
         }
         
         .guideline { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed rgba(220, 38, 38, 0.8); z-index: 9999; pointer-events: none; }
@@ -57,7 +57,7 @@
             </div>
             
             <div v-if="activeTab === 'create'" class="flex gap-4">
-                <button @click="downloadArt" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg">💾 下載作品</button>
+                <button @click="downloadArt" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg">🖼️ 生成圖片並長按儲存</button>
                 <button @click.stop="showGuides = !showGuides" :class="['px-6 py-2 rounded-full text-xs transition-all border-2 font-bold', showGuides ? 'bg-red-600 border-red-400 text-white shadow-lg' : 'bg-stone-800 border-stone-600 text-stone-400']">
                     {{ showGuides ? '隱藏構圖線' : '顯示構圖線' }}
                 </button>
@@ -118,10 +118,10 @@
             <main class="col-span-3 bg-stone-100 h-full w-full flex flex-col">
                 <div class="bg-white p-3 border-b flex justify-between items-center px-8 shadow-sm">
                     <span class="text-stone-500 text-xs font-bold">💡 看板沒顯示？請點擊右方按鈕：</span>
-                    <a href="https://padlet.com/214cxi4v4ja5bqla" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all shadow-md">🌐 直接打開 Padlet 網頁</a>
+                    <a href="https://padlet.com/i1ki3ei68dwuc2fm" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all shadow-md">🌐 直接打開 Padlet 網頁</a>
                 </div>
                 <div class="flex-grow p-4">
-                    <iframe src="https://padlet.com/embed/214cxi4v4ja5bqla" width="100%" height="100%" frameborder="0" allow="camera;microphone;geolocation" style="border-radius: 12px; background: white; border: 1px solid #ddd;"></iframe>
+                    <iframe src="https://padlet.com/embed/i1ki3ei68dwuc2fm" width="100%" height="100%" frameborder="0" allow="camera;microphone;geolocation" style="border-radius: 12px; background: white; border: 1px solid #ddd;"></iframe>
                 </div>
             </main>
         </template>
@@ -189,10 +189,10 @@
                     this.showGuides = false;
                     setTimeout(() => {
                         html2canvas(document.getElementById('canvas'), { backgroundColor: '#fcfcf9', scale: 2 }).then(canvas => {
-                            const link = document.createElement('a');
-                            link.download = `山水意境-${Date.now()}.png`;
-                            link.href = canvas.toDataURL();
-                            link.click();
+                            const imgData = canvas.toDataURL("image/png");
+                            // iPad Safari 最佳實踐：開新分頁顯示圖片，讓學生長按儲存
+                            const newWindow = window.open();
+                            newWindow.document.write('<img src="' + imgData + '" style="max-width:100%;"><p style="font-family:sans-serif; text-align:center; color:#666;">長按圖片即可儲存作品至相冊</p>');
                         });
                     }, 100);
                 },
