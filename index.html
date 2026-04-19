@@ -14,16 +14,13 @@
         .page-container { display: grid; grid-template-columns: 240px 1fr 280px; grid-template-rows: auto 1fr; height: 100vh; }
         header { grid-column: span 3; }
 
-        /* 分頁切換樣式 */
         .nav-btn { transition: all 0.3s; }
         .nav-btn.active { background: #f5f5f4; color: #1c1917; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-        /* 素材庫 */
         .library-panel { background: #2d2a26; display: flex; flex-direction: column; border-right: 1px solid #1a1816; overflow: hidden; }
         .category-tab { font-size: 11px; padding: 12px 4px; color: #888; border-bottom: 2px solid transparent; cursor: pointer; text-align: center; }
         .category-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
 
-        /* 畫布區 */
         .canvas-area { background-color: #dbd8cb; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: hidden; position: relative; }
         .vertical-canvas { 
             width: 350px; height: 700px; 
@@ -43,6 +40,14 @@
         .side-panel { background: #fdfdfb; border-left: 1px solid #d1cfc7; padding: 20px; overflow-y: auto; }
         .custom-range { width: 100%; height: 6px; background: #e2e2d5; border-radius: 3px; appearance: none; outline: none; }
         .custom-range::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* 全螢幕下載遮罩層 */
+        .download-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 1000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -57,12 +62,21 @@
             </div>
             
             <div v-if="activeTab === 'create'" class="flex gap-4">
-                <button @click="downloadArt" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg">🖼️ 生成圖片並長按儲存</button>
+                <button @click="generateImage" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg">💾 下載作品</button>
                 <button @click.stop="showGuides = !showGuides" :class="['px-6 py-2 rounded-full text-xs transition-all border-2 font-bold', showGuides ? 'bg-red-600 border-red-400 text-white shadow-lg' : 'bg-stone-800 border-stone-600 text-stone-400']">
-                    {{ showGuides ? '隱藏構圖線' : '顯示構圖線' }}
+                    {{ showGuides ? '構圖線' : '構圖線' }}
                 </button>
             </div>
         </header>
+
+        <div v-if="previewImage" class="download-overlay" @click.self="previewImage = null">
+            <div class="text-white mb-4 text-center">
+                <p class="font-bold text-lg mb-1">🖼️ 作品已生成</p>
+                <p class="text-xs opacity-75">長按下方圖片，選擇「加入照片」儲存</p>
+            </div>
+            <img :src="previewImage" class="max-h-[70vh] shadow-2xl border border-stone-700 mb-6">
+            <button @click="previewImage = null" class="bg-white text-stone-900 px-8 py-3 rounded-full font-bold text-sm shadow-xl">返回修改</button>
+        </div>
 
         <template v-if="activeTab === 'create'">
             <aside class="library-panel">
@@ -135,6 +149,7 @@
                     activeTab: 'create',
                     selectedId: null,
                     showGuides: false,
+                    previewImage: null, // 用於顯示下載圖層
                     nextId: 1,
                     currentCategory: '山',
                     categories: ['山', '石', '樹', '建築', '物件'],
@@ -184,15 +199,12 @@
                 },
                 deleteElement(id) { this.elements = this.elements.filter(el => el.id !== id); this.selectedId = null; },
                 moveLayer(id, delta) { const el = this.elements.find(e => e.id === id); if (el) el.z = Math.max(1, el.z + delta); },
-                downloadArt() {
+                generateImage() {
                     this.selectedId = null;
                     this.showGuides = false;
                     setTimeout(() => {
                         html2canvas(document.getElementById('canvas'), { backgroundColor: '#fcfcf9', scale: 2 }).then(canvas => {
-                            const imgData = canvas.toDataURL("image/png");
-                            // iPad Safari 最佳實踐：開新分頁顯示圖片，讓學生長按儲存
-                            const newWindow = window.open();
-                            newWindow.document.write('<img src="' + imgData + '" style="max-width:100%;"><p style="font-family:sans-serif; text-align:center; color:#666;">長按圖片即可儲存作品至相冊</p>');
+                            this.previewImage = canvas.toDataURL("image/png");
                         });
                     }, 100);
                 },
